@@ -1,4 +1,4 @@
-// otel.js
+// trace.js
 
 const { NodeSDK } = require('@opentelemetry/sdk-node');
 const { OTLPTraceExporter } = require('@opentelemetry/exporter-otlp-grpc');
@@ -8,14 +8,20 @@ const { ExpressInstrumentation } = require('@opentelemetry/instrumentation-expre
 const { GraphQLInstrumentation } = require('@opentelemetry/instrumentation-graphql');
 const { Resource } = require('@opentelemetry/resources');
 const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
-
-
+const { SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base');
 
 // Configure the OTLP trace exporter
 const traceExporter = new OTLPTraceExporter({
   url: 'http://localhost:4317', // Ensure this URL is correct
 });
 
+// Custom span processor to add tenant_id to every span
+class TenantIdSpanProcessor extends SimpleSpanProcessor {
+  onStart(span) {
+    // Add tenant_id attribute to every span at the start
+    span.setAttribute('tenant_id', 86);
+  }
+}
 
 // Set up the NodeSDK with auto-instrumentation and specific instrumentations
 const sdk = new NodeSDK({
@@ -35,10 +41,13 @@ const sdk = new NodeSDK({
   ],
 });
 
-// Initialize the SDK and start tracing
+// Start the SDK (no .then() or promises needed)
 try {
   sdk.start();
   console.log('OpenTelemetry initialized');
+  
+  // Add the custom span processor after SDK starts
+  sdk._tracerProvider.addSpanProcessor(new TenantIdSpanProcessor());
 } catch (err) {
   console.error('Error initializing OpenTelemetry', err);
 }
