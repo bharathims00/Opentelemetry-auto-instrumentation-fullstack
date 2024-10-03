@@ -8,15 +8,17 @@ body {
     margin: 0;
 }
 
-.login-container {
+.container {
     background: white;
     padding: 20px;
     border-radius: 5px;
     box-shadow: 0px 0px 10px 0px #000;
+    width: 300px; /* Set a fixed width for the container */
 }
 
 h2 {
     margin-bottom: 20px;
+    text-align: center; /* Center the heading */
 }
 
 .form-group {
@@ -28,7 +30,7 @@ label {
     margin-bottom: 5px;
 }
 
-input[type="text"], input[type="password"] {
+input[type="text"], input[type="password"], input[type="number"] { /* Added input[type="number"] */
     width: 100%;
     padding: 8px;
     box-sizing: border-box;

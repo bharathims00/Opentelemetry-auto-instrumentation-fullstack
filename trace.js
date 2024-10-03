@@ -9,17 +9,29 @@ const { GraphQLInstrumentation } = require('@opentelemetry/instrumentation-graph
 const { Resource } = require('@opentelemetry/resources');
 const { SemanticResourceAttributes } = require('@opentelemetry/semantic-conventions');
 const { SimpleSpanProcessor } = require('@opentelemetry/sdk-trace-base');
+const { context, trace } = require('@opentelemetry/api');
 
 // Configure the OTLP trace exporter
 const traceExporter = new OTLPTraceExporter({
-  url: 'http://localhost:4317', // Ensure this URL is correct
+  url: 'http://localhost:4327', // Ensure this URL is correct and the collector is running
 });
 
-// Custom span processor to add tenant_id to every span
+// Custom Span Processor to add tenant ID to each span dynamically
 class TenantIdSpanProcessor extends SimpleSpanProcessor {
-  onStart(span) {
-    // Add tenant_id attribute to every span at the start
-    span.setAttribute('tenant_id', 86);
+  constructor(spanExporter) {
+    super(spanExporter);
+  }
+
+  onStart(span, parentContext) {
+    super.onStart(span, parentContext);
+    
+    // Retrieve tenant ID from the current context, if available
+    const tenantId = context.active().getValue('tenant.id');
+    
+    if (tenantId) {
+      // Set tenant ID as a span attribute
+      span.setAttribute('tenant.id', tenantId);
+    }
   }
 }
 
@@ -41,16 +53,28 @@ const sdk = new NodeSDK({
   ],
 });
 
-// Start the SDK (no .then() or promises needed)
+// Start the SDK
 try {
   sdk.start();
   console.log('OpenTelemetry initialized');
   
-  // Add the custom span processor after SDK starts
-  sdk._tracerProvider.addSpanProcessor(new TenantIdSpanProcessor());
+  // Add the custom span processor
+  sdk._tracerProvider.addSpanProcessor(new TenantIdSpanProcessor(traceExporter));
+
 } catch (err) {
   console.error('Error initializing OpenTelemetry', err);
 }
+
+// Function to bind tenant ID to the context
+function setTenantId(tenantId) {
+  const newContext = context.active().setValue('tenant.id', tenantId);
+  return context.with(newContext, () => {});
+}
+
+// Export the setTenantId function to be used in server.js
+module.exports = {
+  setTenantId,
+};
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {

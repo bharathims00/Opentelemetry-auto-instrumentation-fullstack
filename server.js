@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const db = require('./database');
-
+const { setTenantId } = require('./trace'); // Import the setTenantId function
 
 const app = express();
 const port = 3080;
@@ -12,15 +12,22 @@ const port = 3080;
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Middleware to set the tenant ID in the context
+app.use((req, res, next) => {
+  const tenantId = req.headers['x-tenant-id']; // Adjust based on how you receive the tenant ID
+  if (tenantId) {
+    // Set tenant ID in context
+    setTenantId(tenantId);
+  }
+  next();
+});
+
 // A simple route to demonstrate tracing
 app.get('/', (req, res) => {
-    // Start a new span
     const span = trace.getTracer('default').startSpan('handle_request');
     res.send('Hello, world!');
     span.end(); // End the span after the response is sent
-  });
-  
-
+});
 
 // Route for serving the login page
 app.get('/', (req, res) => {
@@ -36,7 +43,8 @@ app.post('/login', (req, res) => {
             return res.status(500).send('Error occurred during login.');
         }
         if (results.length > 0) {
-            res.send(`Welcome, ${username}!`);
+            const user = results[0]; // Get the first result (the user)
+            res.send(`Welcome, ${user.username}! Your tenant ID is ${user.tenant_id}.`);
         } else {
             res.send('Invalid credentials. Please try again.');
         }
@@ -45,9 +53,8 @@ app.post('/login', (req, res) => {
 
 // Handle user registration
 app.post('/register', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, tenant_id } = req.body; // Added tenant_id to the destructured request body
 
-    // Check if the username already exists
     db.query("SELECT * FROM users WHERE username = ?", [username], (err, results) => {
         if (err) {
             return res.status(500).send('Error occurred during registration.');
@@ -55,8 +62,7 @@ app.post('/register', (req, res) => {
         if (results.length > 0) {
             res.send('Username already exists. Please choose a different username.');
         } else {
-            // Insert the new user into the database
-            db.query("INSERT INTO users (username, password) VALUES (?, ?)", [username, password], (err, results) => {
+            db.query("INSERT INTO users (username, password, tenant_id) VALUES (?, ?, ?)", [username, password, tenant_id], (err, results) => {
                 if (err) {
                     return res.status(500).send('Error occurred during registration.');
                 }
