@@ -26,7 +26,7 @@ class TenantIdSpanProcessor extends SimpleSpanProcessor {
 // Set up the NodeSDK with auto-instrumentation and specific instrumentations
 const sdk = new NodeSDK({
   resource: new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: 'simple-login-mysql', // Service name
+    [SemanticResourceAttributes.SERVICE_NAME]: 'simple-login', // Service name
   }),
   traceExporter,
   instrumentations: [

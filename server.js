@@ -1,9 +1,8 @@
-require('./trace.js');
+require('./trace.js'); // Ensure the tracing setup is loaded first
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const db = require('./database');
-
+const db = require('./database'); // Assuming this is your database setup
 
 const app = express();
 const port = 3080;
@@ -14,16 +13,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // A simple route to demonstrate tracing
 app.get('/', (req, res) => {
-    // Start a new span
-    const span = trace.getTracer('default').startSpan('handle_request');
     res.send('Hello, world!');
-    span.end(); // End the span after the response is sent
-  });
-  
-
+});
 
 // Route for serving the login page
-app.get('/', (req, res) => {
+app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
